@@ -108,4 +108,4 @@ This repository is a front-end demonstration using synthetic case data and simul
 
 ## Deployment
 
-Every push to `main` automatically deploys through the workflow in `.github/workflows/deploy-pages.yml`.
+Every push to `main` automatically deploys through GitHub Pages.
