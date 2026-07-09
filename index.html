@@ -976,24 +976,24 @@
 
             <div class="dashboard-stats">
                 <div class="stat-card">
-                    <div class="stat-number" style="color: #667eea;">127</div>
+                    <div class="stat-number" id="activeCasesMetric" style="color: #667eea;">0</div>
                     <div class="stat-label">Active Cases</div>
-                    <div class="stat-trend trend-down">↓ 8% from last week</div>
+                    <div class="stat-trend">Live shared case records</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" style="color: #28a745;">72%</div>
+                    <div class="stat-number" id="responseRateMetric" style="color: #28a745;">0%</div>
                     <div class="stat-label">Response Rate</div>
-                    <div class="stat-trend trend-up">↑ 15% from last month</div>
+                    <div class="stat-trend">Responded cases / total cases</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" style="color: #ffc107;">12.5</div>
-                    <div class="stat-label">Avg. Closure Days</div>
-                    <div class="stat-trend trend-up">↓ 3.2 days improved</div>
+                    <div class="stat-number" id="avgClosureMetric" style="color: #ffc107;">0</div>
+                    <div class="stat-label">Avg. Days Open</div>
+                    <div class="stat-trend">Across current cases</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" style="color: #dc3545;">23</div>
+                    <div class="stat-number" id="overdueCasesMetric" style="color: #dc3545;">0</div>
                     <div class="stat-label">Overdue Cases</div>
-                    <div class="stat-trend trend-down">↓ 5 from yesterday</div>
+                    <div class="stat-trend">Status overdue or open over 10 days</div>
                 </div>
             </div>
 
@@ -1015,52 +1015,8 @@
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr>
-                        <td>PV-2025-001234</td>
-                        <td>Patient A</td>
-                        <td>Aspirin 75mg</td>
-                        <td><span class="priority-badge priority-high">High</span></td>
-                        <td><span class="status-badge status-pending">Pending</span></td>
-                        <td>5</td>
-                        <td><button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;">Follow Up</button></td>
-                    </tr>
-                    <tr>
-                        <td>PV-2025-001235</td>
-                        <td>Patient B</td>
-                        <td>Metformin 500mg</td>
-                        <td><span class="priority-badge priority-medium">Medium</span></td>
-                        <td><span class="status-badge status-responded">Responded</span></td>
-                        <td>3</td>
-                        <td><button class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Review</button></td>
-                    </tr>
-                    <tr>
-                        <td>PV-2025-001236</td>
-                        <td>Patient C</td>
-                        <td>Lisinopril 10mg</td>
-                        <td><span class="priority-badge priority-low">Low</span></td>
-                        <td><span class="status-badge status-overdue">Overdue</span></td>
-                        <td>12</td>
-                        <td><button class="btn" style="padding: 5px 10px; font-size: 12px; background: #dc3545; color: white;">Escalate</button></td>
-                    </tr>
-                    <tr>
-                        <td>PV-2025-001237</td>
-                        <td>Patient D</td>
-                        <td>Atorvastatin 20mg</td>
-                        <td><span class="priority-badge priority-medium">Medium</span></td>
-                        <td><span class="status-badge status-pending">Pending</span></td>
-                        <td>2</td>
-                        <td><button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;">Follow Up</button></td>
-                    </tr>
-                    <tr>
-                        <td>PV-2025-001238</td>
-                        <td>Patient E</td>
-                        <td>Omeprazole 40mg</td>
-                        <td><span class="priority-badge priority-high">High</span></td>
-                        <td><span class="status-badge status-responded">Responded</span></td>
-                        <td>1</td>
-                        <td><button class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Review</button></td>
-                    </tr>
+                <tbody id="dashboardCaseRows">
+                    <!-- Generated from the shared casesData state. -->
                 </tbody>
             </table>
         </div>
@@ -1100,6 +1056,7 @@
         let currentAnalysisCaseId = 'PV-2025-001234';
         let patientCaseId = 'PV-2025-001234';
         let patientMedicationName = 'Aspirin 75mg';
+        let patientInitialFormHtml = '';
 
         // Tab Management
         // caseId is optional — pass it when navigating into AI Case Analysis for a specific case
@@ -1140,6 +1097,9 @@
             if (tabName === 'ai-analysis') {
                 renderAICaseAnalysis(caseId || currentAnalysisCaseId);
             }
+            if (tabName === 'pv-dashboard' && window.VigilX) {
+                window.VigilX.applyEngineToTable();
+            }
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -1155,19 +1115,12 @@
                 ? window.VigilX.FUEngine(data)
                 : { priority: 'High', score: '0.94', channel: 'Email', nextAction: 'Immediate manual outreach' };
 
-            const patientMeta = {
-                'PV-2025-001234': { patient: 'Patient A (ID: ****1122)', medication: 'Aspirin 75mg', ae: 'Gastrointestinal bleeding' },
-                'PV-2025-001235': { patient: 'John Smith (ID: ****5678)', medication: 'Metformin 500mg', ae: 'Gastrointestinal upset' },
-                'PV-2025-001236': { patient: 'Sarah Johnson (ID: ****9012)', medication: 'Lisinopril 10mg', ae: 'Persistent cough' }
+            const meta = {
+                patient: data.patient || 'Patient (ID: ****' + caseId.slice(-4) + ')',
+                medication: data.medication || patientMedicationName || 'Not specified',
+                ae: data.ae || 'Adverse event under review'
             };
-            const missingFieldNames = {
-                'PV-2025-001234': ['Hospitalization status', 'Concomitant medications', 'Outcome of adverse event'],
-                'PV-2025-001235': ['Lab results at time of event', 'Dosage adjustment history'],
-                'PV-2025-001236': ['Rechallenge outcome']
-            };
-
-            const meta = patientMeta[caseId] || { patient: 'Patient (ID: ****' + caseId.slice(-4) + ')', medication: 'Not specified', ae: 'Adverse event under review' };
-            const missing = missingFieldNames[caseId] || ['Additional clinical notes'];
+            const missing = data.missingFieldNames || ['Additional clinical notes'];
 
             const titleEl = document.getElementById('aiAnalysisCaseId');
             if (titleEl) titleEl.textContent = 'Analyzing Case #' + caseId;
@@ -1176,12 +1129,12 @@
             const summaryEl = document.getElementById('aiCaseSummary');
             if (summaryEl) {
                 summaryEl.innerHTML =
-                    '<div class="detail-item"><div class="detail-label">Patient</div><div class="detail-value">' + meta.patient + '</div></div>' +
-                    '<div class="detail-item"><div class="detail-label">Medication</div><div class="detail-value">' + meta.medication + '</div></div>' +
-                    '<div class="detail-item"><div class="detail-label">Adverse Event</div><div class="detail-value">' + meta.ae + '</div></div>' +
-                    '<div class="detail-item"><div class="detail-label">Seriousness</div><div class="detail-value">' + data.seriousness + '</div></div>' +
-                    '<div class="detail-item"><div class="detail-label">Days Since Report</div><div class="detail-value">' + data.daysSinceReport + ' days</div></div>' +
-                    '<div class="detail-item"><div class="detail-label">Region</div><div class="detail-value">' + data.region + '</div></div>';
+                    '<div class="detail-item"><div class="detail-label">Patient</div><div class="detail-value">' + escapeHtml(meta.patient) + '</div></div>' +
+                    '<div class="detail-item"><div class="detail-label">Medication</div><div class="detail-value">' + escapeHtml(meta.medication) + '</div></div>' +
+                    '<div class="detail-item"><div class="detail-label">Adverse Event</div><div class="detail-value">' + escapeHtml(meta.ae) + '</div></div>' +
+                    '<div class="detail-item"><div class="detail-label">Seriousness</div><div class="detail-value">' + escapeHtml(data.seriousness) + '</div></div>' +
+                    '<div class="detail-item"><div class="detail-label">Days Since Report</div><div class="detail-value">' + escapeHtml(data.daysSinceReport) + ' days</div></div>' +
+                    '<div class="detail-item"><div class="detail-label">Region</div><div class="detail-value">' + escapeHtml(data.region) + '</div></div>';
             }
 
             // 2. Priority recommendation
@@ -1207,11 +1160,11 @@
             if (data.daysSinceReport > 10) reasons.push(data.daysSinceReport + ' days open — approaching the escalation threshold.');
             if (reasons.length === 0) reasons.push('No high-risk factors detected — case flagged for routine review.');
             const reasonsList = document.getElementById('aiReasonsList');
-            if (reasonsList) reasonsList.innerHTML = reasons.map(r => '<li>✓ ' + r + '</li>').join('');
+            if (reasonsList) reasonsList.innerHTML = reasons.map(r => '<li>✓ ' + escapeHtml(r) + '</li>').join('');
 
             // 5. Missing information detected
             const missingList = document.getElementById('aiMissingList');
-            if (missingList) missingList.innerHTML = missing.map(m => '<li>⚠ ' + m + '</li>').join('');
+            if (missingList) missingList.innerHTML = missing.map(m => '<li>⚠ ' + escapeHtml(m) + '</li>').join('');
 
             // 6. Suggested next action
             const urgency = result.priority === 'High' ? '24 hours' : result.priority === 'Medium' ? '3 days' : '7 days';
@@ -1223,6 +1176,19 @@
 
         // 7. Generate Smart Follow-up — hands off from AI analysis into the patient follow-up questionnaire
         function generateSmartFollowup() {
+            const data = (window.VigilX && window.VigilX.casesData[currentAnalysisCaseId]) || {};
+            const formSection = document.querySelector('#patient .form-section');
+            if (formSection && patientInitialFormHtml) {
+                formSection.innerHTML = patientInitialFormHtml;
+            }
+            currentStep = 1;
+            patientCaseId = currentAnalysisCaseId;
+            patientMedicationName = data.medication || patientMedicationName;
+            updateProgress();
+            const caseInput = document.getElementById('patientCaseId');
+            const medicationInput = document.getElementById('patientMedicationName');
+            if (caseInput) caseInput.value = patientCaseId;
+            if (medicationInput) medicationInput.value = patientMedicationName;
             showNotification('Smart follow-up generated for Case #' + currentAnalysisCaseId, 'success');
             setTimeout(() => {
                 showTab('patient');
@@ -1269,6 +1235,21 @@
                 patientMedicationName = enteredMedication;
                 currentAnalysisCaseId = enteredCaseId;
                 if (caseIdInput) caseIdInput.value = enteredCaseId;
+                if (window.VigilX) {
+                    const existing = window.VigilX.casesData[enteredCaseId] || {};
+                    window.VigilX.casesData[enteredCaseId] = Object.assign({
+                        patient: 'Patient (ID: ****' + enteredCaseId.slice(-4) + ')',
+                        ae: 'Patient-reported adverse event',
+                        missingFields: 2,
+                        missingFieldNames: ['Clinical assessment', 'Outcome of adverse event'],
+                        seriousness: 'Non-Serious',
+                        priorAttempts: 0,
+                        daysSinceReport: 0,
+                        region: 'IND',
+                        lastChannel: 'SMS',
+                        status: 'In Progress'
+                    }, existing, { medication: enteredMedication, status: 'In Progress' });
+                }
             }
 
             if (currentStep < totalSteps) {
@@ -1394,6 +1375,13 @@
             `;
             document.getElementById('submittedCaseId').textContent = patientCaseId;
             document.getElementById('submittedMedicationName').textContent = patientMedicationName;
+            if (window.VigilX && window.VigilX.casesData[patientCaseId]) {
+                window.VigilX.casesData[patientCaseId].medication = patientMedicationName;
+                window.VigilX.casesData[patientCaseId].status = 'Responded';
+                window.VigilX.casesData[patientCaseId].missingFields = 1;
+                window.VigilX.casesData[patientCaseId].missingFieldNames = ['Healthcare provider assessment'];
+                window.VigilX.applyEngineToTable();
+            }
         }
 
         // HCP Portal Functions
@@ -1530,6 +1518,8 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
+            const initialForm = document.querySelector('#patient .form-section');
+            if (initialForm) patientInitialFormHtml = initialForm.innerHTML;
             updateProgress();
             showNotification('Welcome to PV Connect!', 'success');
         });
@@ -1625,80 +1615,84 @@ const vigilMetrics = {
     avgDaysOpen: 0
 };
 
-// Example synthetic case data keyed by Case ID (you can expand)
+// Shared case records used by Patient, AI Analysis, Smart Follow-up, and Dashboard.
 const casesData = {
-    'PV-2025-001234': { missingFields: 3, seriousness: 'Serious', priorAttempts: 1, daysSinceReport: 12, region: 'EU', lastChannel: 'Email' },
-    'PV-2025-001235': { missingFields: 1, seriousness: 'Non-Serious', priorAttempts: 0, daysSinceReport: 4, region: 'NA', lastChannel: 'SMS' },
-    'PV-2025-001236': { missingFields: 2, seriousness: 'Non-Serious', priorAttempts: 2, daysSinceReport: 18, region: 'APAC', lastChannel: 'Phone' }
+    'PV-2025-001234': { patient: 'Patient A', medication: 'Aspirin 75mg', ae: 'Gastrointestinal bleeding', missingFields: 3, missingFieldNames: ['Hospitalization status', 'Concomitant medications', 'Outcome of adverse event'], seriousness: 'Serious', priorAttempts: 1, daysSinceReport: 12, region: 'EU', lastChannel: 'Email', status: 'Pending' },
+    'PV-2025-001235': { patient: 'Patient B', medication: 'Metformin 500mg', ae: 'Gastrointestinal upset', missingFields: 1, missingFieldNames: ['Lab results at time of event'], seriousness: 'Non-Serious', priorAttempts: 0, daysSinceReport: 4, region: 'NA', lastChannel: 'SMS', status: 'Responded' },
+    'PV-2025-001236': { patient: 'Patient C', medication: 'Lisinopril 10mg', ae: 'Persistent cough', missingFields: 2, missingFieldNames: ['Rechallenge outcome', 'Treatment change'], seriousness: 'Non-Serious', priorAttempts: 2, daysSinceReport: 18, region: 'APAC', lastChannel: 'Phone', status: 'Overdue' },
+    'PV-2025-001237': { patient: 'Patient D', medication: 'Atorvastatin 20mg', ae: 'Muscle pain', missingFields: 1, missingFieldNames: ['Creatine kinase result'], seriousness: 'Non-Serious', priorAttempts: 0, daysSinceReport: 2, region: 'IND', lastChannel: 'SMS', status: 'Pending' },
+    'PV-2025-001238': { patient: 'Patient E', medication: 'Omeprazole 40mg', ae: 'Severe headache', missingFields: 2, missingFieldNames: ['Event outcome', 'Concomitant medication'], seriousness: 'Serious', priorAttempts: 1, daysSinceReport: 1, region: 'LATAM', lastChannel: 'Email', status: 'Responded' }
 };
 
-// Apply engine to cases table: updates badges + metrics
+function escapeHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function openDashboardCase(caseId) {
+    showTab('ai-analysis', caseId);
+}
+
+// Generate the dashboard from shared case records and recalculate all metrics.
 function applyEngineToTable() {
-    const tbody = document.querySelector('.cases-table tbody');
+    const tbody = document.getElementById('dashboardCaseRows');
     if (!tbody) return;
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    vigilMetrics.totalCases = rows.length;
+
+    const records = Object.entries(casesData);
+    vigilMetrics.totalCases = records.length;
     vigilMetrics.high = vigilMetrics.medium = vigilMetrics.low = 0;
-    let totalMissing = 0, totalDays = 0, counted = 0;
-    rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length < 1) return;
-        const caseId = cells[0].innerText.trim();
-        const daysOpenCell = cells[5];
-        const priorityCell = cells[3];
-        let data = casesData[caseId];
-        if (!data) {
-            // create a simulated case from table values if possible
-            const days = parseInt(daysOpenCell ? daysOpenCell.innerText.trim() : '0') || 0;
-            // default simulation
-            data = { missingFields: Math.floor(Math.random()*4), seriousness: Math.random()>0.7?'Serious':'Non-Serious', priorAttempts: Math.floor(Math.random()*3), daysSinceReport: days, region: 'NA', lastChannel: 'Email' };
-            casesData[caseId] = data;
-        }
+    let totalMissing = 0;
+    let totalDays = 0;
+    let responded = 0;
+    let overdue = 0;
+
+    tbody.innerHTML = records.map(([caseId, data]) => {
         const result = FUEngine(data);
-        // update priority badge
-        const badge = priorityCell.querySelector('.priority-badge');
-        if (badge) {
-            badge.innerText = result.priority;
-            badge.classList.remove('priority-high','priority-medium','priority-low');
-            badge.classList.add(result.priority === 'High' ? 'priority-high' : result.priority === 'Medium' ? 'priority-medium' : 'priority-low');
-            badge.title = "Score: " + result.score + " | Channel: " + result.channel;
-        } else {
-            // create badge
-            const span = document.createElement('span');
-            span.className = 'priority-badge ' + (result.priority === 'High' ? 'priority-high' : result.priority === 'Medium' ? 'priority-medium' : 'priority-low');
-            span.innerText = result.priority;
-            priorityCell.innerHTML = '';
-            priorityCell.appendChild(span);
-        }
-        // accumulate metrics
-        totalMissing += data.missingFields;
-        totalDays += data.daysSinceReport;
-        counted++;
+        const status = data.status || 'Pending';
+        const priorityClass = result.priority === 'High' ? 'priority-high' : result.priority === 'Medium' ? 'priority-medium' : 'priority-low';
+        const statusClass = status === 'Responded' ? 'status-responded' : status === 'Overdue' ? 'status-overdue' : 'status-pending';
+        const actionLabel = status === 'Responded' ? 'Review' : status === 'Overdue' ? 'Escalate' : 'Follow Up';
+        const actionClass = status === 'Responded' ? 'btn-success' : status === 'Overdue' ? '' : 'btn-primary';
+
+        totalMissing += Number(data.missingFields) || 0;
+        totalDays += Number(data.daysSinceReport) || 0;
+        if (status === 'Responded') responded++;
+        if (status === 'Overdue' || (Number(data.daysSinceReport) || 0) > 10) overdue++;
         if (result.priority === 'High') vigilMetrics.high++;
         else if (result.priority === 'Medium') vigilMetrics.medium++;
         else vigilMetrics.low++;
-    });
-    vigilMetrics.avgMissing = counted ? (totalMissing / counted).toFixed(2) : 0;
-    vigilMetrics.avgDaysOpen = counted ? (totalDays / counted).toFixed(1) : 0;
+
+        return '<tr>' +
+            '<td>' + escapeHtml(caseId) + '</td>' +
+            '<td>' + escapeHtml(data.patient || 'Patient') + '</td>' +
+            '<td>' + escapeHtml(data.medication || 'Not specified') + '</td>' +
+            '<td><span class="priority-badge ' + priorityClass + '" title="Score: ' + escapeHtml(result.score) + ' | Channel: ' + escapeHtml(result.channel) + '">' + escapeHtml(result.priority) + '</span></td>' +
+            '<td><span class="status-badge ' + statusClass + '">' + escapeHtml(status) + '</span></td>' +
+            '<td>' + escapeHtml(data.daysSinceReport || 0) + '</td>' +
+            '<td><button class="btn ' + actionClass + '" style="padding: 5px 10px; font-size: 12px;" onclick="openDashboardCase(\'' + escapeHtml(caseId) + '\')">' + actionLabel + '</button></td>' +
+            '</tr>';
+    }).join('');
+
+    vigilMetrics.avgMissing = records.length ? (totalMissing / records.length).toFixed(2) : 0;
+    vigilMetrics.avgDaysOpen = records.length ? (totalDays / records.length).toFixed(1) : 0;
+    vigilMetrics.responded = responded;
+    vigilMetrics.overdue = overdue;
     updateDashboardMetrics();
 }
 
 function updateDashboardMetrics() {
-    // find stat-number elements in order used in HTML
-    const statElems = document.querySelectorAll('.stat-card .stat-number');
-    // fallback mapping: assume specific order: total, high, medium, low, overdue
-    if (statElems && statElems.length >= 3) {
-        // try to update by labels
-        document.querySelectorAll('.stat-card').forEach(card => {
-            const label = card.querySelector('.stat-label').innerText.toLowerCase();
-            const numElem = card.querySelector('.stat-number');
-            if (label.includes('total')) numElem.innerText = vigilMetrics.totalCases;
-            else if (label.includes('high')) numElem.innerText = vigilMetrics.high;
-            else if (label.includes('medium')) numElem.innerText = vigilMetrics.medium;
-            else if (label.includes('low')) numElem.innerText = vigilMetrics.low;
-            else if (label.includes('overdue')) numElem.innerText = Math.max(0, Math.floor(vigilMetrics.totalCases*0.12));
-        });
-    }
+    const activeEl = document.getElementById('activeCasesMetric');
+    const responseEl = document.getElementById('responseRateMetric');
+    const averageEl = document.getElementById('avgClosureMetric');
+    const overdueEl = document.getElementById('overdueCasesMetric');
+    if (activeEl) activeEl.textContent = vigilMetrics.totalCases;
+    if (responseEl) responseEl.textContent = Math.round((vigilMetrics.responded / Math.max(1, vigilMetrics.totalCases)) * 100) + '%';
+    if (averageEl) averageEl.textContent = vigilMetrics.avgDaysOpen;
+    if (overdueEl) overdueEl.textContent = vigilMetrics.overdue;
     // small metrics area if exists
     const metricsBox = document.getElementById('vigilx-metrics');
     if (metricsBox) {
@@ -1708,12 +1702,10 @@ function updateDashboardMetrics() {
     }
 }
 
-// Hook: when DOM ready, apply engine
+// Hook: render shared state once; later user actions update it immediately.
 document.addEventListener('DOMContentLoaded', function() {
     try {
         applyEngineToTable();
-        // refresh every 8 seconds to simulate live scoring
-        setInterval(applyEngineToTable, 8000);
         renderAICaseAnalysis(currentAnalysisCaseId);
     } catch (e) {
         console.error('VigilX engine error', e);
