@@ -736,7 +736,40 @@
 
                 <div class="form-group">
                     <label class="form-label" data-en="Medication Name" data-hi="दवा का नाम">Medication Name</label>
-                    <input type="text" class="form-control" value="Aspirin 75mg" readonly>
+                    <input type="text" id="patientMedicationName" class="form-control" value="Aspirin 75mg"
+                           list="tabletOptions" maxlength="80" autocomplete="off"
+                           placeholder="Type or select a tablet">
+                    <datalist id="tabletOptions">
+                        <option value="Aspirin">
+                        <option value="Bisoprolol">
+                        <option value="Cetirizine">
+                        <option value="Doxycycline">
+                        <option value="Enalapril">
+                        <option value="Fluconazole">
+                        <option value="Gabapentin">
+                        <option value="Hydrochlorothiazide">
+                        <option value="Ibuprofen">
+                        <option value="Jardiance (Empagliflozin)">
+                        <option value="Ketorolac">
+                        <option value="Losartan">
+                        <option value="Metformin">
+                        <option value="Naproxen">
+                        <option value="Omeprazole">
+                        <option value="Paracetamol">
+                        <option value="Quetiapine">
+                        <option value="Rosuvastatin">
+                        <option value="Sertraline">
+                        <option value="Telmisartan">
+                        <option value="Ursodeoxycholic acid">
+                        <option value="Valsartan">
+                        <option value="Warfarin">
+                        <option value="Xarelto (Rivaroxaban)">
+                        <option value="Yasmin">
+                        <option value="Zinc sulfate">
+                    </datalist>
+                    <small style="display: block; margin-top: 6px; color: #666;">
+                        Start typing to choose an A–Z suggestion, or enter another medication.
+                    </small>
                 </div>
 
                 <div class="form-group">
@@ -1066,6 +1099,7 @@
         const totalSteps = 4;
         let currentAnalysisCaseId = 'PV-2025-001234';
         let patientCaseId = 'PV-2025-001234';
+        let patientMedicationName = 'Aspirin 75mg';
 
         // Tab Management
         // caseId is optional — pass it when navigating into AI Case Analysis for a specific case
@@ -1216,6 +1250,8 @@
             if (currentStep === 1) {
                 const caseIdInput = document.getElementById('patientCaseId');
                 const enteredCaseId = caseIdInput ? caseIdInput.value.trim().toUpperCase() : patientCaseId;
+                const medicationInput = document.getElementById('patientMedicationName');
+                const enteredMedication = medicationInput ? medicationInput.value.trim() : patientMedicationName;
 
                 if (!/^[A-Z0-9][A-Z0-9-]{3,29}$/.test(enteredCaseId)) {
                     showNotification('Enter a valid Case ID using letters, numbers, or hyphens.', 'error');
@@ -1223,7 +1259,14 @@
                     return;
                 }
 
+                if (enteredMedication.length < 2) {
+                    showNotification('Enter or select a medication name.', 'error');
+                    if (medicationInput) medicationInput.focus();
+                    return;
+                }
+
                 patientCaseId = enteredCaseId;
+                patientMedicationName = enteredMedication;
                 currentAnalysisCaseId = enteredCaseId;
                 if (caseIdInput) caseIdInput.value = enteredCaseId;
             }
@@ -1331,7 +1374,8 @@
                         Your response has been submitted successfully. This information helps us improve medication safety for everyone.
                     </p>
                     <p style="margin: -15px 0 25px; color: #444;">
-                        Case reference: <strong id="submittedCaseId"></strong>
+                        Case reference: <strong id="submittedCaseId"></strong><br>
+                        Medication: <strong id="submittedMedicationName"></strong>
                     </p>
                     <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
                         <h4 style="margin-bottom: 15px;">What happens next?</h4>
@@ -1349,6 +1393,7 @@
                 </div>
             `;
             document.getElementById('submittedCaseId').textContent = patientCaseId;
+            document.getElementById('submittedMedicationName').textContent = patientMedicationName;
         }
 
         // HCP Portal Functions
