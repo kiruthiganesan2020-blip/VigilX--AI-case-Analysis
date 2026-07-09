@@ -25,13 +25,14 @@ PV team monitors cases on the dashboard
 ### 1. Patient Portal
 
 1. Open **Patient Portal**.
-2. Select how the patient is feeling and enter any additional symptoms.
-3. Choose **Next** to complete:
+2. Enter or update the supplied Case ID.
+3. Select how the patient is feeling and enter any additional symptoms.
+4. Choose **Next** to complete:
    - basic information;
    - medication details;
    - adverse-event timeline.
-4. Finish the questionnaire to view the submission confirmation.
-5. English and Hindi language controls are available at the top of the page.
+5. Finish the questionnaire to view the submission confirmation and submitted case reference.
+6. English and Hindi language controls are available at the top of the page.
 
 ### 2. Healthcare Provider Portal
 
@@ -107,4 +108,3 @@ This repository is a front-end demonstration using synthetic case data and simul
 ## Deployment
 
 Every push to `main` automatically deploys through the workflow in `.github/workflows/deploy-pages.yml`.
-

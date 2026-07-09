@@ -727,7 +727,11 @@
                 
                 <div class="form-group">
                     <label class="form-label" data-en="Case ID" data-hi="केस आईडी">Case ID</label>
-                    <input type="text" class="form-control" value="PV-2025-001234" readonly>
+                    <input type="text" id="patientCaseId" class="form-control" value="PV-2025-001234"
+                           maxlength="30" autocomplete="off" aria-describedby="caseIdHelp">
+                    <small id="caseIdHelp" style="display: block; margin-top: 6px; color: #666;">
+                        Enter the case reference supplied by the safety team.
+                    </small>
                 </div>
 
                 <div class="form-group">
@@ -1061,6 +1065,7 @@
         let currentStep = 1;
         const totalSteps = 4;
         let currentAnalysisCaseId = 'PV-2025-001234';
+        let patientCaseId = 'PV-2025-001234';
 
         // Tab Management
         // caseId is optional — pass it when navigating into AI Case Analysis for a specific case
@@ -1208,6 +1213,21 @@
 
         // Patient Portal Functions
         function nextStep() {
+            if (currentStep === 1) {
+                const caseIdInput = document.getElementById('patientCaseId');
+                const enteredCaseId = caseIdInput ? caseIdInput.value.trim().toUpperCase() : patientCaseId;
+
+                if (!/^[A-Z0-9][A-Z0-9-]{3,29}$/.test(enteredCaseId)) {
+                    showNotification('Enter a valid Case ID using letters, numbers, or hyphens.', 'error');
+                    if (caseIdInput) caseIdInput.focus();
+                    return;
+                }
+
+                patientCaseId = enteredCaseId;
+                currentAnalysisCaseId = enteredCaseId;
+                if (caseIdInput) caseIdInput.value = enteredCaseId;
+            }
+
             if (currentStep < totalSteps) {
                 currentStep++;
                 updateProgress();
@@ -1310,6 +1330,9 @@
                     <p style="font-size: 1.1rem; color: #666; margin-bottom: 30px;">
                         Your response has been submitted successfully. This information helps us improve medication safety for everyone.
                     </p>
+                    <p style="margin: -15px 0 25px; color: #444;">
+                        Case reference: <strong id="submittedCaseId"></strong>
+                    </p>
                     <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
                         <h4 style="margin-bottom: 15px;">What happens next?</h4>
                         <ul style="text-align: left; max-width: 400px; margin: 0 auto;">
@@ -1325,6 +1348,7 @@
                     </div>
                 </div>
             `;
+            document.getElementById('submittedCaseId').textContent = patientCaseId;
         }
 
         // HCP Portal Functions
