@@ -781,6 +781,7 @@
                     <datalist id="adverseEventOptions">
                         <option value="Abdominal pain">
                         <option value="Allergic rash">
+                        <option value="Anaphylaxis">
                         <option value="Cough">
                         <option value="Diarrhoea">
                         <option value="Dizziness">
@@ -789,10 +790,14 @@
                         <option value="Gastrointestinal bleeding">
                         <option value="Headache">
                         <option value="Heartburn">
+                        <option value="Hospitalization due to bleeding">
                         <option value="Low blood pressure">
                         <option value="Muscle pain">
                         <option value="Nausea">
+                        <option value="Severe chest pain">
+                        <option value="Shortness of breath">
                         <option value="Swelling">
+                        <option value="Unusual bleeding">
                         <option value="Vomiting">
                     </datalist>
                     <small style="display: block; margin-top: 6px; color: #666;">
@@ -1048,10 +1053,62 @@
             'zinc': 'Nausea'
         };
 
+        const seriousAdverseEventKeywords = [
+            'anaphylaxis',
+            'bleeding',
+            'blood in stool',
+            'chest pain',
+            'difficulty breathing',
+            'fainting',
+            'hospital',
+            'hospitalization',
+            'life threatening',
+            'loss of consciousness',
+            'seizure',
+            'shortness of breath',
+            'stroke',
+            'swelling of face',
+            'unusual bleeding'
+        ];
+
+        const highRiskMedicationKeywords = [
+            'aspirin',
+            'clopidogrel',
+            'eliquis',
+            'heparin',
+            'insulin',
+            'ketorolac',
+            'methotrexate',
+            'warfarin',
+            'xarelto',
+            'rivaroxaban'
+        ];
+
         function suggestAdverseEvent(medication) {
             const normalized = String(medication || '').toLowerCase();
             const match = Object.keys(medicineEventSuggestions).find(key => normalized.includes(key));
             return match ? medicineEventSuggestions[match] : '';
+        }
+
+        function inferCaseRisk(medication, adverseEvent) {
+            const med = String(medication || '').toLowerCase();
+            const event = String(adverseEvent || '').toLowerCase();
+            const seriousByEvent = seriousAdverseEventKeywords.some(keyword => event.includes(keyword));
+            const highRiskMedication = highRiskMedicationKeywords.some(keyword => med.includes(keyword));
+            const bleedingCombo = highRiskMedication && /bleeding|blood|haemorrhage|hemorrhage/.test(event);
+            const cardiopulmonaryEvent = /chest pain|shortness of breath|difficulty breathing|fainting|loss of consciousness/.test(event);
+            const isSerious = seriousByEvent || bleedingCombo || cardiopulmonaryEvent;
+
+            return {
+                seriousness: isSerious ? 'Serious' : 'Non-Serious',
+                missingFields: isSerious ? 4 : 2,
+                missingFieldNames: isSerious
+                    ? ['Healthcare provider assessment', 'Hospitalization status', 'Outcome of adverse event', 'Treatment/intervention details']
+                    : ['Clinical assessment', 'Outcome of adverse event'],
+                priorAttempts: isSerious ? 2 : 0,
+                daysSinceReport: isSerious ? 12 : 0,
+                hospitalized: /hospital/.test(event) ? true : false
+            };
         }
 
         function setupPatientInputs() {
@@ -1310,18 +1367,20 @@
                 if (caseIdInput) caseIdInput.value = enteredCaseId;
                 if (window.VigilX) {
                     const existing = window.VigilX.casesData[enteredCaseId] || {};
+                    const inferredRisk = inferCaseRisk(enteredMedication, enteredAdverseEvent);
                     window.VigilX.casesData[enteredCaseId] = Object.assign({
                         patient: 'Patient (ID: ****' + enteredCaseId.slice(-4) + ')',
                         ae: 'Patient-reported adverse event',
-                        missingFields: 2,
-                        missingFieldNames: ['Clinical assessment', 'Outcome of adverse event'],
-                        seriousness: 'Non-Serious',
-                        priorAttempts: 0,
-                        daysSinceReport: 0,
+                        missingFields: inferredRisk.missingFields,
+                        missingFieldNames: inferredRisk.missingFieldNames,
+                        seriousness: inferredRisk.seriousness,
+                        priorAttempts: inferredRisk.priorAttempts,
+                        daysSinceReport: inferredRisk.daysSinceReport,
+                        hospitalized: inferredRisk.hospitalized,
                         region: 'IND',
                         lastChannel: 'SMS',
                         status: 'In Progress'
-                    }, existing, { medication: enteredMedication, ae: enteredAdverseEvent, status: 'In Progress' });
+                    }, existing, Object.assign({}, inferredRisk, { medication: enteredMedication, ae: enteredAdverseEvent, status: 'In Progress' }));
                     window.VigilX.saveCaseData();
                 }
             }
@@ -1453,11 +1512,18 @@
             document.getElementById('submittedMedicationName').textContent = patientMedicationName;
             document.getElementById('submittedAdverseEvent').textContent = patientAdverseEvent;
             if (window.VigilX && window.VigilX.casesData[patientCaseId]) {
+                const inferredRisk = inferCaseRisk(patientMedicationName, patientAdverseEvent);
                 window.VigilX.casesData[patientCaseId].medication = patientMedicationName;
                 window.VigilX.casesData[patientCaseId].ae = patientAdverseEvent;
                 window.VigilX.casesData[patientCaseId].status = 'Awaiting HCP';
-                window.VigilX.casesData[patientCaseId].missingFields = 1;
-                window.VigilX.casesData[patientCaseId].missingFieldNames = ['Healthcare provider assessment'];
+                window.VigilX.casesData[patientCaseId].seriousness = inferredRisk.seriousness;
+                window.VigilX.casesData[patientCaseId].missingFields = inferredRisk.seriousness === 'Serious' ? 3 : 1;
+                window.VigilX.casesData[patientCaseId].missingFieldNames = inferredRisk.seriousness === 'Serious'
+                    ? ['Healthcare provider assessment', 'Hospitalization status', 'Outcome of adverse event']
+                    : ['Healthcare provider assessment'];
+                window.VigilX.casesData[patientCaseId].priorAttempts = inferredRisk.priorAttempts;
+                window.VigilX.casesData[patientCaseId].daysSinceReport = inferredRisk.daysSinceReport;
+                window.VigilX.casesData[patientCaseId].hospitalized = inferredRisk.hospitalized;
                 window.VigilX.saveCaseData();
                 window.VigilX.renderHCPPortal();
                 window.VigilX.applyEngineToTable();

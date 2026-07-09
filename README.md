@@ -93,6 +93,20 @@ The prototype assigns a weighted score using:
 
 The score maps cases to **High**, **Medium**, or **Low** priority and recommends immediate manual outreach, combined automated/human follow-up, or automated follow-up.
 
+### Example high-priority cases to test
+
+Use these examples in the Patient Portal to see the AI Case Analysis and Dashboard show **High Priority** instead of Low:
+
+| Medication name | Reported adverse event | Expected priority |
+|---|---|---|
+| Warfarin | Unusual bleeding | High |
+| Xarelto (Rivaroxaban) | Gastrointestinal bleeding | High |
+| Aspirin 75mg | Hospitalization due to bleeding | High |
+| Insulin | Loss of consciousness | High |
+| Ibuprofen | Shortness of breath | High |
+
+Mild events such as `Cetirizine + Drowsiness` or `Zinc sulfate + Nausea` intentionally remain lower priority so the dashboard demonstrates different triage levels.
+
 ## Run locally
 
 Because the application is a self-contained static page, you can either open `index.html` directly or serve the folder with any static web server.
