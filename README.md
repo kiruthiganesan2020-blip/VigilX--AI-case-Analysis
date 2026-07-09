@@ -27,13 +27,14 @@ PV team monitors cases on the dashboard
 1. Open **Patient Portal**.
 2. Enter or update the supplied Case ID.
 3. Type a medication name or select one from the A–Z tablet suggestions.
-4. Select how the patient is feeling and enter any additional symptoms.
-5. Choose **Next** to complete:
+4. Confirm or edit the medicine-specific adverse-event suggestion.
+5. Select how the patient is feeling and enter any additional symptoms.
+6. Choose **Next** to complete:
    - basic information;
    - medication details;
    - adverse-event timeline.
-6. Finish the questionnaire to view the submitted case reference and medication.
-7. English and Hindi language controls are available at the top of the page.
+7. Finish the questionnaire to view the submitted case reference, medication, and adverse event.
+8. English and Hindi language controls are available at the top of the page.
 
 ### 2. Healthcare Provider Portal
 

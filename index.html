@@ -773,6 +773,34 @@
                 </div>
 
                 <div class="form-group">
+                    <label class="form-label">Reported Adverse Event</label>
+                    <input type="text" id="patientAdverseEvent" class="form-control"
+                           value="Gastrointestinal bleeding" list="adverseEventOptions"
+                           maxlength="120" autocomplete="off"
+                           placeholder="Type or select the reported event">
+                    <datalist id="adverseEventOptions">
+                        <option value="Abdominal pain">
+                        <option value="Allergic rash">
+                        <option value="Cough">
+                        <option value="Diarrhoea">
+                        <option value="Dizziness">
+                        <option value="Drowsiness">
+                        <option value="Dry mouth">
+                        <option value="Gastrointestinal bleeding">
+                        <option value="Headache">
+                        <option value="Heartburn">
+                        <option value="Low blood pressure">
+                        <option value="Muscle pain">
+                        <option value="Nausea">
+                        <option value="Swelling">
+                        <option value="Vomiting">
+                    </datalist>
+                    <small style="display: block; margin-top: 6px; color: #666;">
+                        A prototype suggestion appears for known medicines; confirm or edit the actual reported event.
+                    </small>
+                </div>
+
+                <div class="form-group">
                     <label class="form-label" data-en="How are you feeling now?" data-hi="आप अब कैसा महसूस कर रहे हैं?">How are you feeling now?</label>
                     <div class="radio-group">
                         <label class="radio-option">
@@ -1009,6 +1037,7 @@
                         <th>Case ID</th>
                         <th>Patient</th>
                         <th>Medication</th>
+                        <th>Adverse Event</th>
                         <th>Priority</th>
                         <th>Status</th>
                         <th>Days Open</th>
@@ -1056,7 +1085,56 @@
         let currentAnalysisCaseId = 'PV-2025-001234';
         let patientCaseId = 'PV-2025-001234';
         let patientMedicationName = 'Aspirin 75mg';
+        let patientAdverseEvent = 'Gastrointestinal bleeding';
         let patientInitialFormHtml = '';
+
+        const medicineEventSuggestions = {
+            'aspirin': 'Gastrointestinal bleeding',
+            'bisoprolol': 'Low blood pressure',
+            'cetirizine': 'Drowsiness',
+            'doxycycline': 'Nausea',
+            'enalapril': 'Cough',
+            'fluconazole': 'Headache',
+            'gabapentin': 'Dizziness',
+            'hydrochlorothiazide': 'Dizziness',
+            'ibuprofen': 'Abdominal pain',
+            'jardiance': 'Frequent urination',
+            'empagliflozin': 'Frequent urination',
+            'ketorolac': 'Abdominal pain',
+            'losartan': 'Dizziness',
+            'metformin': 'Diarrhoea',
+            'naproxen': 'Heartburn',
+            'omeprazole': 'Headache',
+            'paracetamol': 'Allergic rash',
+            'quetiapine': 'Drowsiness',
+            'rosuvastatin': 'Muscle pain',
+            'sertraline': 'Nausea',
+            'telmisartan': 'Low blood pressure',
+            'ursodeoxycholic': 'Diarrhoea',
+            'valsartan': 'Dizziness',
+            'warfarin': 'Unusual bleeding',
+            'xarelto': 'Unusual bleeding',
+            'rivaroxaban': 'Unusual bleeding',
+            'yasmin': 'Headache',
+            'zinc': 'Nausea'
+        };
+
+        function suggestAdverseEvent(medication) {
+            const normalized = String(medication || '').toLowerCase();
+            const match = Object.keys(medicineEventSuggestions).find(key => normalized.includes(key));
+            return match ? medicineEventSuggestions[match] : '';
+        }
+
+        function setupPatientInputs() {
+            const medicationInput = document.getElementById('patientMedicationName');
+            const adverseEventInput = document.getElementById('patientAdverseEvent');
+            if (!medicationInput || !adverseEventInput) return;
+
+            medicationInput.addEventListener('change', function() {
+                const suggestion = suggestAdverseEvent(medicationInput.value);
+                if (suggestion) adverseEventInput.value = suggestion;
+            });
+        }
 
         // Tab Management
         // caseId is optional — pass it when navigating into AI Case Analysis for a specific case
@@ -1184,11 +1262,15 @@
             currentStep = 1;
             patientCaseId = currentAnalysisCaseId;
             patientMedicationName = data.medication || patientMedicationName;
+            patientAdverseEvent = data.ae || patientAdverseEvent;
             updateProgress();
             const caseInput = document.getElementById('patientCaseId');
             const medicationInput = document.getElementById('patientMedicationName');
+            const adverseEventInput = document.getElementById('patientAdverseEvent');
             if (caseInput) caseInput.value = patientCaseId;
             if (medicationInput) medicationInput.value = patientMedicationName;
+            if (adverseEventInput) adverseEventInput.value = patientAdverseEvent;
+            setupPatientInputs();
             showNotification('Smart follow-up generated for Case #' + currentAnalysisCaseId, 'success');
             setTimeout(() => {
                 showTab('patient');
@@ -1218,6 +1300,8 @@
                 const enteredCaseId = caseIdInput ? caseIdInput.value.trim().toUpperCase() : patientCaseId;
                 const medicationInput = document.getElementById('patientMedicationName');
                 const enteredMedication = medicationInput ? medicationInput.value.trim() : patientMedicationName;
+                const adverseEventInput = document.getElementById('patientAdverseEvent');
+                const enteredAdverseEvent = adverseEventInput ? adverseEventInput.value.trim() : patientAdverseEvent;
 
                 if (!/^[A-Z0-9][A-Z0-9-]{3,29}$/.test(enteredCaseId)) {
                     showNotification('Enter a valid Case ID using letters, numbers, or hyphens.', 'error');
@@ -1231,8 +1315,15 @@
                     return;
                 }
 
+                if (enteredAdverseEvent.length < 3) {
+                    showNotification('Enter or select the reported adverse event.', 'error');
+                    if (adverseEventInput) adverseEventInput.focus();
+                    return;
+                }
+
                 patientCaseId = enteredCaseId;
                 patientMedicationName = enteredMedication;
+                patientAdverseEvent = enteredAdverseEvent;
                 currentAnalysisCaseId = enteredCaseId;
                 if (caseIdInput) caseIdInput.value = enteredCaseId;
                 if (window.VigilX) {
@@ -1248,7 +1339,7 @@
                         region: 'IND',
                         lastChannel: 'SMS',
                         status: 'In Progress'
-                    }, existing, { medication: enteredMedication, status: 'In Progress' });
+                    }, existing, { medication: enteredMedication, ae: enteredAdverseEvent, status: 'In Progress' });
                 }
             }
 
@@ -1356,7 +1447,8 @@
                     </p>
                     <p style="margin: -15px 0 25px; color: #444;">
                         Case reference: <strong id="submittedCaseId"></strong><br>
-                        Medication: <strong id="submittedMedicationName"></strong>
+                        Medication: <strong id="submittedMedicationName"></strong><br>
+                        Reported event: <strong id="submittedAdverseEvent"></strong>
                     </p>
                     <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
                         <h4 style="margin-bottom: 15px;">What happens next?</h4>
@@ -1375,8 +1467,10 @@
             `;
             document.getElementById('submittedCaseId').textContent = patientCaseId;
             document.getElementById('submittedMedicationName').textContent = patientMedicationName;
+            document.getElementById('submittedAdverseEvent').textContent = patientAdverseEvent;
             if (window.VigilX && window.VigilX.casesData[patientCaseId]) {
                 window.VigilX.casesData[patientCaseId].medication = patientMedicationName;
+                window.VigilX.casesData[patientCaseId].ae = patientAdverseEvent;
                 window.VigilX.casesData[patientCaseId].status = 'Responded';
                 window.VigilX.casesData[patientCaseId].missingFields = 1;
                 window.VigilX.casesData[patientCaseId].missingFieldNames = ['Healthcare provider assessment'];
@@ -1520,6 +1614,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const initialForm = document.querySelector('#patient .form-section');
             if (initialForm) patientInitialFormHtml = initialForm.innerHTML;
+            setupPatientInputs();
             updateProgress();
             showNotification('Welcome to PV Connect!', 'success');
         });
@@ -1670,6 +1765,7 @@ function applyEngineToTable() {
             '<td>' + escapeHtml(caseId) + '</td>' +
             '<td>' + escapeHtml(data.patient || 'Patient') + '</td>' +
             '<td>' + escapeHtml(data.medication || 'Not specified') + '</td>' +
+            '<td>' + escapeHtml(data.ae || 'Not specified') + '</td>' +
             '<td><span class="priority-badge ' + priorityClass + '" title="Score: ' + escapeHtml(result.score) + ' | Channel: ' + escapeHtml(result.channel) + '">' + escapeHtml(result.priority) + '</span></td>' +
             '<td><span class="status-badge ' + statusClass + '">' + escapeHtml(status) + '</span></td>' +
             '<td>' + escapeHtml(data.daysSinceReport || 0) + '</td>' +
