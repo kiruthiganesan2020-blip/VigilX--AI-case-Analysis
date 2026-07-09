@@ -70,7 +70,9 @@ Open **PV Dashboard** to review:
 
 The in-browser VigilX follow-up engine recalculates sample case priorities from missing fields, seriousness, previous contact attempts, and case age. It also selects a suggested communication channel using regional rules.
 
-Case data is shared across the prototype: an edited Case ID and medication are used by AI Case Analysis, prefilled by Smart Follow-up, and added to the generated dashboard table. Dashboard totals, response rate, average days open, overdue count, priorities, and actions are calculated from the current case records rather than fixed display values.
+Case data is shared across the prototype and saved in the browser. A submitted patient case appears in the HCP Portal, the HCP assessment opens that same case in AI Case Analysis, Smart Follow-up prefills its details, and the dashboard is generated from those records. Dashboard totals, response rate, average days open, overdue count, priorities, and actions are calculated rather than fixed display values.
+
+Use **Submit Another Patient Case** after confirmation, or **New Case** on the dashboard, to start a fresh patient workflow. No unrelated preset patient records are added to the HCP Portal or dashboard.
 
 ## AI prioritization logic
 
