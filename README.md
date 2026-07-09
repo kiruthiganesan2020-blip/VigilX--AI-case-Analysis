@@ -57,7 +57,13 @@ The analysis view presents:
 - missing information;
 - suggested next action.
 
-Choose **Generate Smart Follow-up** to simulate generation of a targeted follow-up request, or **Back to Case** to return to the HCP view.
+Choose **Generate Smart Follow-up** to create a visible, case-specific plan containing the medication, reported event, recommended channel, and targeted questions. From the generated plan you can:
+
+- open a prefilled patient questionnaire;
+- download the follow-up plan as a text file;
+- return to the HCP case.
+
+The patient confirmation screen also provides **Download Case Summary**, which downloads the current case details, workflow status, AI recommendation, and HCP assessment as a text file.
 
 ### 4. Pharmacovigilance Dashboard
 
@@ -109,7 +115,7 @@ Then open the local URL shown in the terminal.
 
 ## Prototype scope
 
-This repository is a front-end demonstration using synthetic case data and simulated actions. It does not currently include authentication, a backend API, persistent storage, real patient data, a trained ML model, or production regulatory controls. It must not be used to make clinical or patient-safety decisions.
+This repository is a front-end demonstration using browser-local case data. It does not currently include authentication, a backend API, shared server storage, real patient data, a trained ML model, or production regulatory controls. It must not be used to make clinical or patient-safety decisions.
 
 ## Deployment
 

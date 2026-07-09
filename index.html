@@ -909,6 +909,18 @@
                 <button class="btn btn-secondary" onclick="showTab('hcp')">Back to Case</button>
                 <button class="btn btn-primary" onclick="generateSmartFollowup()">Generate Smart Follow-up</button>
             </div>
+
+            <div id="smartFollowupPanel" class="case-card" style="display: none; margin-top: 24px;">
+                <div class="case-header">
+                    <div class="case-id">Generated Smart Follow-up Plan</div>
+                    <div class="status-badge status-responded">Ready</div>
+                </div>
+                <div id="smartFollowupContent"></div>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="openSmartFollowupQuestionnaire()">Open Prefilled Questionnaire</button>
+                    <button class="btn btn-secondary" onclick="downloadSmartFollowup()">Download Follow-up Plan</button>
+                </div>
+            </div>
         </div>
 
         <!-- PV Dashboard -->
@@ -1003,6 +1015,7 @@
         let patientMedicationName = 'Aspirin 75mg';
         let patientAdverseEvent = 'Gastrointestinal bleeding';
         let patientInitialFormHtml = '';
+        let lastSmartFollowupCaseId = '';
 
         const medicineEventSuggestions = {
             'aspirin': 'Gastrointestinal bleeding',
@@ -1107,6 +1120,8 @@
             caseId = caseId || 'PV-2025-001234';
 
             const data = window.VigilX && window.VigilX.casesData && window.VigilX.casesData[caseId];
+            const followupPanel = document.getElementById('smartFollowupPanel');
+            if (followupPanel) followupPanel.style.display = 'none';
             if (!data) {
                 document.getElementById('aiAnalysisCaseId').textContent = 'No submitted case selected';
                 document.getElementById('aiCaseSummary').innerHTML = '<p style="color:#666;">Submit a patient case, then complete its HCP review to run AI Case Analysis.</p>';
@@ -1182,15 +1197,54 @@
             currentAnalysisCaseId = caseId;
         }
 
-        // 7. Generate Smart Follow-up — hands off from AI analysis into the patient follow-up questionnaire
+        // Generate a visible, case-specific plan before opening the questionnaire.
         function generateSmartFollowup() {
             const data = (window.VigilX && window.VigilX.casesData[currentAnalysisCaseId]) || {};
+            if (!data.medication) {
+                showNotification('Select a submitted case before generating follow-up.', 'error');
+                return;
+            }
+
+            const result = window.VigilX.FUEngine(data);
+            const missing = data.missingFieldNames && data.missingFieldNames.length
+                ? data.missingFieldNames
+                : ['Current outcome', 'Any treatment changes'];
+            const questions = [
+                'Are you still taking ' + data.medication + '?',
+                'Has the reported event (' + data.ae + ') improved, worsened, or stayed the same?',
+                'Did you visit a healthcare professional or require treatment?'
+            ].concat(missing.map(field => 'Please provide: ' + field + '.'));
+
+            lastSmartFollowupCaseId = currentAnalysisCaseId;
+            data.followupGenerated = true;
+            data.followupQuestions = questions;
+            window.VigilX.saveCaseData();
+
+            const content = document.getElementById('smartFollowupContent');
+            const panel = document.getElementById('smartFollowupPanel');
+            content.innerHTML =
+                '<div class="case-details">' +
+                '<div class="detail-item"><div class="detail-label">Case</div><div class="detail-value">' + escapeHtml(currentAnalysisCaseId) + '</div></div>' +
+                '<div class="detail-item"><div class="detail-label">Medication</div><div class="detail-value">' + escapeHtml(data.medication) + '</div></div>' +
+                '<div class="detail-item"><div class="detail-label">Reported Event</div><div class="detail-value">' + escapeHtml(data.ae) + '</div></div>' +
+                '<div class="detail-item"><div class="detail-label">Recommended Channel</div><div class="detail-value">' + escapeHtml(result.channel) + '</div></div>' +
+                '</div>' +
+                '<h4 style="margin: 18px 0 10px;">Follow-up Questions</h4>' +
+                '<ol style="padding-left: 22px;">' + questions.map(question => '<li style="margin-bottom:8px;">' + escapeHtml(question) + '</li>').join('') + '</ol>';
+            panel.style.display = 'block';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            showNotification('Smart follow-up plan is ready for action.', 'success');
+        }
+
+        function openSmartFollowupQuestionnaire() {
+            const caseId = lastSmartFollowupCaseId || currentAnalysisCaseId;
+            const data = (window.VigilX && window.VigilX.casesData[caseId]) || {};
             const formSection = document.querySelector('#patient .form-section');
             if (formSection && patientInitialFormHtml) {
                 formSection.innerHTML = patientInitialFormHtml;
             }
             currentStep = 1;
-            patientCaseId = currentAnalysisCaseId;
+            patientCaseId = caseId;
             patientMedicationName = data.medication || patientMedicationName;
             patientAdverseEvent = data.ae || patientAdverseEvent;
             updateProgress();
@@ -1201,10 +1255,8 @@
             if (medicationInput) medicationInput.value = patientMedicationName;
             if (adverseEventInput) adverseEventInput.value = patientAdverseEvent;
             setupPatientInputs();
-            showNotification('Smart follow-up generated for Case #' + currentAnalysisCaseId, 'success');
-            setTimeout(() => {
-                showTab('patient');
-            }, 900);
+            showTab('patient');
+            showNotification('Prefilled follow-up questionnaire opened for Case #' + caseId, 'success');
         }
 
         // Language Management
@@ -1390,7 +1442,8 @@
                             <li>Your doctor will be informed if necessary</li>
                         </ul>
                     </div>
-                    <div style="display: flex; gap: 15px; justify-content: center;">
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                        <button class="btn btn-secondary" onclick="downloadSummary()">Download Case Summary</button>
                         <button class="btn btn-primary" onclick="resetPatientForNewCase()">Submit Another Patient Case</button>
                         <button class="btn btn-success" onclick="showTab('hcp')">Continue to HCP Review</button>
                     </div>
@@ -1538,8 +1591,78 @@
             }
         }
 
-        function downloadSummary() {
-            showNotification('Summary downloaded', 'success');
+        function downloadTextFile(filename, content) {
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        function buildCaseSummary(caseId) {
+            const data = window.VigilX && window.VigilX.casesData[caseId];
+            if (!data) return '';
+            const result = window.VigilX.FUEngine(data);
+            return [
+                'VIGILX CASE SUMMARY',
+                '====================',
+                'Case ID: ' + caseId,
+                'Patient: ' + (data.patient || 'Patient'),
+                'Medication: ' + (data.medication || 'Not specified'),
+                'Reported adverse event: ' + (data.ae || 'Not specified'),
+                'Workflow status: ' + (data.status || 'Pending'),
+                'Seriousness: ' + (data.seriousness || 'Non-Serious'),
+                'AI priority: ' + result.priority,
+                'AI score: ' + result.score,
+                'Recommended channel: ' + result.channel,
+                'Suggested action: ' + result.nextAction,
+                'Clinical assessment: ' + (data.clinicalAssessment || 'Awaiting HCP review'),
+                'Clinical notes: ' + (data.hcpNotes || 'None'),
+                'Generated: ' + new Date().toLocaleString(),
+                '',
+                'Prototype output only — not for clinical decision-making.'
+            ].join('\n');
+        }
+
+        function downloadSummary(caseId) {
+            const selectedCaseId = caseId || patientCaseId || currentAnalysisCaseId;
+            const summary = buildCaseSummary(selectedCaseId);
+            if (!summary) {
+                showNotification('No submitted case is available to download.', 'error');
+                return;
+            }
+            downloadTextFile('VigilX-' + selectedCaseId.replace(/[^A-Z0-9-]/gi, '_') + '-summary.txt', summary);
+            showNotification('Case summary file downloaded.', 'success');
+        }
+
+        function downloadSmartFollowup() {
+            const caseId = lastSmartFollowupCaseId || currentAnalysisCaseId;
+            const data = window.VigilX && window.VigilX.casesData[caseId];
+            if (!data || !data.followupQuestions) {
+                showNotification('Generate the smart follow-up plan first.', 'error');
+                return;
+            }
+            const result = window.VigilX.FUEngine(data);
+            const content = [
+                'VIGILX SMART FOLLOW-UP PLAN',
+                '===========================',
+                'Case ID: ' + caseId,
+                'Medication: ' + data.medication,
+                'Reported adverse event: ' + data.ae,
+                'Recommended channel: ' + result.channel,
+                'Priority: ' + result.priority,
+                '',
+                'FOLLOW-UP QUESTIONS',
+                ...data.followupQuestions.map((question, index) => (index + 1) + '. ' + question),
+                '',
+                'Prototype output only — review before use.'
+            ].join('\n');
+            downloadTextFile('VigilX-' + caseId.replace(/[^A-Z0-9-]/gi, '_') + '-follow-up.txt', content);
+            showNotification('Smart follow-up plan downloaded.', 'success');
         }
 
         function submitFeedback() {
